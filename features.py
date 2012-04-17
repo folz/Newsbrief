@@ -203,14 +203,5 @@ def main():
             summariesfile.write(writableval + '\n')
             summariesfile.write('\n')
 
-def test():
-    now = time.time()
-    get_articles(national_news)
-    print "elapsed time: get_articles", time.time() - now
-    now = time.time()
-    get_articles_threaded(national_news)
-    print "elapsed time: get_articles_threaded", time.time() - now
-
 if __name__ == "__main__":
     main()
-#    test()
