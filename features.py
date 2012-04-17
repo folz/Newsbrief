@@ -19,7 +19,7 @@ national_news = [
 
 gateway = JavaGateway()
 
-q = Queue.Queue()
+downloads = Queue.Queue()
 articles = Queue.Queue()
 
 class Article:
@@ -27,21 +27,22 @@ class Article:
         self.__dict__.update(kwds)
 
 class EntryDownloader(threading.Thread):
-    def __init__(self, q):
+    def __init__(self, downloads):
         threading.Thread.__init__(self)
-        self.q = q
+        self.downloads = downloads
 
     def run(self):
         while True:
-            entry = self.q.get()
+            entry = self.downloads.get()
 
             text = get_text(entry.link)
             words = get_words(text)
 
             article = Article(entry=entry, text=text, words=words)
+            print article.entry.title, article.entry.link
             articles.put(article)
 
-            self.q.task_done()
+            self.downloads.task_done()
 
 def get_text(url):
     return gateway.entry_point.getText(url)
@@ -62,18 +63,17 @@ def get_articles(feedlist):
     articletext = {}
     ec = 0
     for i in range(5):
-        t = EntryDownloader(q)
+        t = EntryDownloader(downloads)
         t.setDaemon(True)
         t.start()
 
     for feedurl in national_news:
         f = feedparser.parse(feedurl)
         for e in f.entries:
-            q.put(e)
+            downloads.put(e)
             time.sleep(.25)
 
-
-    q.join()
+    downloads.join()
 
     while not articles.empty():
         article = articles.get()
