@@ -3,12 +3,12 @@ from pprint import pprint
 import feedparser
 from numpy import *
 
+import Queue
 import re
+import threading
 import time
 
 from py4j.java_gateway import JavaGateway
-
-SUMMARY_URL = 'http://www.bookkle.com/web/guest/api'
 
 national_news = [
       'http://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml'
@@ -21,11 +21,32 @@ national_news = [
 
 gateway = JavaGateway()
 
-def get_article_content(url):
-    return gateway.entry_point.getText(url)
+q = Queue.Queue()
+articles = Queue.Queue()
+
+class Article:
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+class EntryDownloader(threading.Thread):
+    def __init__(self, q):
+        threading.Thread.__init__(self)
+        self.q = q
+
+    def run(self):
+        while True:
+            entry = self.q.get()
+
+            text = get_text(entry.link)
+            words = get_words(text)
+
+            article = Article(entry=entry, text=text, words=words)
+            articles.put(article)
+
+            self.q.task_done()
 
 def get_text(url):
-    return get_article_content(url)
+    return gateway.entry_point.getText(url)
 
 def get_words(text):
     return map(clean_word, text.replace("\n", " ").split(" "))
@@ -42,27 +63,36 @@ def get_articles(feedlist):
     articletitles = []
     articletext = {}
     ec = 0
-    for feedurl in feedlist:
+    for i in range(5):
+        t = EntryDownloader(q)
+        t.setDaemon(True)
+        t.start()
+
+    for feedurl in national_news:
         f = feedparser.parse(feedurl)
-
         for e in f.entries:
-            print e
-            if e in articletitles: continue
+            q.put(e)
+            time.sleep(.25)
 
-            txt = get_text(e.link)
-            words = get_words(txt)
 
+    q.join()
+
+    while not articles.empty():
+        article = articles.get()
+
+        if article.entry.title not in articletitles:
             articlewords.append({})
-            articletitles.append(e.title)
-            articletext[e.title] = txt
+            articletitles.append(article.entry.title)
+            articletext[article.entry.title] = article.text
 
-            for word in words:
+            for word in article.words:
                 allwords.setdefault(word, 0)
                 allwords[word]+=1
                 articlewords[ec].setdefault(word, 0)
                 articlewords[ec][word]+=1
-            ec += 1
-            time.sleep(.25)
+            ec +=1
+        articles.task_done()
+
     return allwords, articlewords, articletitles, articletext
 
 def makematrix(allw, articlew):
@@ -146,7 +176,7 @@ def showfeatures(w, h, titles, wordvec, out="features.txt"):
 def summarise(text, sentences):
     return gateway.entry_point.getSummary(text, sentences)
 
-if __name__ == "__main__":
+def main():
     print "init"
     allw, artw, artt, arttxt = get_articles(national_news)
 
@@ -174,3 +204,15 @@ if __name__ == "__main__":
             summariesfile.write(writablekey + '\n')
             summariesfile.write(writableval + '\n')
             summariesfile.write('\n')
+
+def test():
+    now = time.time()
+    get_articles(national_news)
+    print "elapsed time: get_articles", time.time() - now
+    now = time.time()
+    get_articles_threaded(national_news)
+    print "elapsed time: get_articles_threaded", time.time() - now
+
+if __name__ == "__main__":
+    main()
+#    test()
