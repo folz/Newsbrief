@@ -1,0 +1,5 @@
+national_news.txt
+summaries.txt
+*.pyc
+*.class
+venv/
