@@ -13,10 +13,8 @@ from py4j.java_gateway import JavaGateway
 national_news = [
       'http://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml'
     , 'http://www.npr.org/rss/rss.php?id=1003'
-    , 'http://www.npr.org/rss/rss.php?id=1014'
     , 'http://feeds.washingtonpost.com/rss/national'
     , 'http://feeds.latimes.com/latimes/news/nationworld/nation'
-    , 'http://feeds.latimes.com/latimes/news/politics/'
 ]
 
 gateway = JavaGateway()
