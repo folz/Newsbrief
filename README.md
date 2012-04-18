@@ -1,10 +1,12 @@
-# News....
+# Newsbrief
 
 Get today's important news and summarize it into bite-sized chunks.
 
 Running it:
 
 `virtualenv venv --distribute`
+
+`source venv/bin/activate`
 
 `pip install -r requirements.txt`
 
