@@ -31,7 +31,7 @@ class EntryDownloader(threading.Thread):
         while True:
             entry = self.downloads.get()
 
-            text = get_text(entry.link)
+            text = get_article_content(entry.link)
             words = get_words(text)
 
             article = Article(entry=entry, text=text, words=words)
@@ -40,36 +40,49 @@ class EntryDownloader(threading.Thread):
 
             self.downloads.task_done()
 
-def get_text(url):
+def get_article_content(url):
+    ''' Finds the textual article content in an HTML page. '''
+
     return gateway.entry_point.getText(url)
 
 def get_words(text):
+    ''' Returns a list of all words in a string. '''
+
     return map(clean_word, text.replace("\n", " ").split(" "))
 
 def clean_word(word):
+    ''' Takes a possible word and tries to make it a word. '''
+
     if word.endswith((":", ",", ";")):
         word = word[:-1]
 
     return word.lower()
 
 def get_articles(feedlist):
-    allwords = {}
-    articlewords = []
-    articletitles = []
-    articletext = {}
-    ec = 0
+    # Start five download daemons
     for i in range(5):
         t = EntryDownloader(downloads)
         t.setDaemon(True)
         t.start()
 
-    for feedurl in national_news:
+    # Add the RSS entries to the download queue, ready to be downloaded
+    for feedurl in feedlist:
         f = feedparser.parse(feedurl)
         for e in f.entries:
             downloads.put(e)
 
+    # By now, the download daemons should be grabbing the articles. Block until
+    # the downloads queue is empty; i.e. there are no more articles to download.
     downloads.join()
 
+def analyze_articles(articles):
+    allwords = {}
+    articlewords = []
+    articletitles = []
+    articletext = {}
+    ec = 0
+
+    # But analyze them sequentially for now
     while not articles.empty():
         article = articles.get()
 
@@ -167,29 +180,33 @@ def showfeatures(w, h, titles, wordvec, out="features.txt"):
     return clusters
 
 def summarise(text, sentences):
+    ''' Summarise a body of text in some number of sentences. '''
     return gateway.entry_point.getSummary(text, sentences)
 
 def main():
-    print "init"
-    allw, artw, artt, arttxt = get_articles(national_news)
+    print "downloading"
+    get_articles(national_news)
 
-    print "makematrix"
+    print "analyzing"
+    allw, artw, artt, arttxt = analyze_articles(articles)
+
+    print "matrixizing"
     wordmatrix, wordvec = makematrix(allw, artw)
-
     v = matrix(wordmatrix)
-    print "factorize"
+
+    print "factorizing"
     weights, feat = factorize(v, pc=20, iter=50)
 
-    print "features"
+    print "featurizing"
     clusters = showfeatures(weights, feat, artt, wordvec, out="national_news.txt")
 
     summaries = {}
 
-    print "summarise"
+    print "summarising" # haha, British
     for key, val in clusters.items():
         summaries[key] = summarise(arttxt[val[0][1]], 20)
 
-    print "Summaries!"
+    print "finalizing"
     with open("summaries.txt", 'w') as summariesfile:
         for key, val in summaries.items():
             writablekey = unicode(key).encode('utf-8')
