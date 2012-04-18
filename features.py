@@ -1,12 +1,8 @@
-from pprint import pprint
-
 import feedparser
 from numpy import *
 
 import Queue
-import re
 import threading
-import time
 
 from py4j.java_gateway import JavaGateway
 
@@ -71,7 +67,6 @@ def get_articles(feedlist):
         f = feedparser.parse(feedurl)
         for e in f.entries:
             downloads.put(e)
-            time.sleep(.25)
 
     downloads.join()
 
