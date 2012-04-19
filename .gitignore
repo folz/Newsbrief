@@ -1,5 +1,4 @@
-national_news.txt
-summaries.txt
+*.txt
 *.pyc
 *.class
 venv/

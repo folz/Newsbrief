@@ -11,6 +11,17 @@ national_news = [
     , 'http://www.npr.org/rss/rss.php?id=1003'
     , 'http://feeds.washingtonpost.com/rss/national'
     , 'http://feeds.latimes.com/latimes/news/nationworld/nation'
+    , 'http://english.aljazeera.net/Services/Rss/?PostingId=200772115196613309'
+    , 'http://rss.cnn.com/rss/cnn_us.rss'
+]
+
+world_news = [
+      'http://feeds.bbci.co.uk/news/world/rss.xml'
+    , 'http://www.npr.org/rss/rss.php?id=1004'
+    , 'http://feeds.washingtonpost.com/rss/world'
+    , 'http://feeds.washingtonpost.com/rss/world'
+    , 'http://www.aljazeera.com/Services/Rss/?PostingId=2007731105943979989'
+    , 'http://rss.cnn.com/rss/edition_world.rss'
 ]
 
 gateway = JavaGateway()
@@ -183,9 +194,9 @@ def summarise(text, sentences):
     ''' Summarise a body of text in some number of sentences. '''
     return gateway.entry_point.getSummary(text, sentences)
 
-def main():
+def main(name, feeds):
     print "downloading"
-    get_articles(national_news)
+    get_articles(feeds)
 
     print "analyzing"
     allw, artw, artt, arttxt = analyze_articles(articles)
@@ -198,7 +209,7 @@ def main():
     weights, feat = factorize(v, pc=20, iter=50)
 
     print "featurizing"
-    clusters = showfeatures(weights, feat, artt, wordvec, out="national_news.txt")
+    clusters = showfeatures(weights, feat, artt, wordvec, out="{0}_news.txt".format(name))
 
     summaries = {}
 
@@ -207,7 +218,7 @@ def main():
         summaries[key] = summarise(arttxt[val[0][1]], 20)
 
     print "finalizing"
-    with open("summaries.txt", 'w') as summariesfile:
+    with open("{0}_summaries.txt".format(name), 'w') as summariesfile:
         for key, val in summaries.items():
             writablekey = unicode(key).encode('utf-8')
             writableval = unicode(val).encode('utf-8')
@@ -216,4 +227,5 @@ def main():
             summariesfile.write('\n')
 
 if __name__ == "__main__":
-    main()
+    main("national", national_news)
+    main("world", world_news)
